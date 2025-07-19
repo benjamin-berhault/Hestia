@@ -146,6 +146,16 @@ class User(Base, TimestampMixin, SoftDeleteMixin, GeoLocationMixin):
     # Referrals
     referrals_made = relationship("Referral", foreign_keys="[Referral.referrer_id]", back_populates="referrer")
     referral_received = relationship("Referral", foreign_keys="[Referral.referred_id]", back_populates="referred", uselist=False)
+    
+    # Personal Development System
+    development_goals = relationship("PersonalDevelopmentGoal", back_populates="user", cascade="all, delete-orphan")
+    challenge_participations = relationship("ChallengeParticipation", back_populates="user", cascade="all, delete-orphan")
+    mentoring_relationships = relationship("MentorshipPair", foreign_keys="[MentorshipPair.mentor_id]", back_populates="mentor")
+    mentee_relationships = relationship("MentorshipPair", foreign_keys="[MentorshipPair.mentee_id]", back_populates="mentee")
+    badges = relationship("UserBadge", back_populates="user", cascade="all, delete-orphan")
+    group_memberships = relationship("GroupMembership", back_populates="user", cascade="all, delete-orphan")
+    feedback_requests = relationship("FeedbackRequest", back_populates="requesting_user", cascade="all, delete-orphan")
+    feedback_responses = relationship("FeedbackResponse", back_populates="responding_user", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}', status='{self.status.value}')>"
@@ -270,6 +280,78 @@ class User(Base, TimestampMixin, SoftDeleteMixin, GeoLocationMixin):
         percentage = int((completion / total_steps) * 100)
         self.profile_completion_percentage = percentage
         return percentage
+
+    # Personal Development Methods
+    def get_development_score(self) -> int:
+        """Calculate overall personal development score"""
+        total_points = sum(goal.points_earned for goal in self.development_goals)
+        challenge_points = sum(participation.points_earned for participation in self.challenge_participations)
+        badge_points = sum(badge.points_earned for badge in self.badges)
+        return total_points + challenge_points + badge_points
+
+    def get_active_goals_count(self) -> int:
+        """Get count of active development goals"""
+        from .personal_development import AchievementStatus
+        return len([goal for goal in self.development_goals 
+                   if goal.status in [AchievementStatus.NOT_STARTED, AchievementStatus.IN_PROGRESS]])
+
+    def get_completed_goals_count(self) -> int:
+        """Get count of completed development goals"""
+        from .personal_development import AchievementStatus
+        return len([goal for goal in self.development_goals 
+                   if goal.status in [AchievementStatus.COMPLETED, AchievementStatus.VERIFIED]])
+
+    def get_current_challenges(self) -> List:
+        """Get current active challenge participations"""
+        from .personal_development import AchievementStatus
+        return [participation for participation in self.challenge_participations
+                if participation.status == AchievementStatus.IN_PROGRESS]
+
+    def can_be_mentor(self) -> bool:
+        """Check if user qualifies to be a mentor"""
+        # Requirements: completed goals, good standing, experience
+        completed_goals = self.get_completed_goals_count()
+        development_score = self.get_development_score()
+        
+        return (completed_goals >= 3 and 
+                development_score >= 500 and
+                self.warning_count == 0 and
+                self.status == UserStatus.ACTIVE)
+
+    def get_mentorship_capacity(self) -> int:
+        """Get how many more mentees this user can take"""
+        active_mentorships = len([m for m in self.mentoring_relationships 
+                                 if m.status == "active"])
+        max_mentees = 3 if self.is_premium else 1
+        return max(0, max_mentees - active_mentorships)
+
+    def get_development_streak(self) -> int:
+        """Get current development activity streak in days"""
+        # Calculate based on recent goal updates, challenge check-ins, etc.
+        # This would need more complex logic to track daily activity
+        return 0  # Placeholder
+
+    def get_category_expertise(self) -> Dict[str, str]:
+        """Get user's expertise level in each development category"""
+        from .personal_development import DevelopmentCategory
+        
+        expertise = {}
+        for category in DevelopmentCategory:
+            category_goals = [goal for goal in self.development_goals 
+                            if goal.category == category]
+            completed = len([goal for goal in category_goals 
+                           if goal.status.value in ['completed', 'verified']])
+            
+            if completed >= 5:
+                expertise[category.value] = "expert"
+            elif completed >= 3:
+                expertise[category.value] = "advanced"
+            elif completed >= 1:
+                expertise[category.value] = "intermediate"
+            else:
+                expertise[category.value] = "beginner"
+        
+        return expertise
 
 class Subscription(Base, TimestampMixin):
     """User subscription tracking"""

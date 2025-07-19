@@ -23,7 +23,7 @@ from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 # Import configurations and services
 from config import settings
 from database import db_manager, get_db
-from routes import auth, users, profiles, photos, matches, messages, charters, admin, payments, analytics
+from routes import auth, users, profiles, photos, matches, messages, charters, admin, payments, analytics, personal_development
 from services import NotificationService, AIService, AnalyticsService, SafetyService
 from utils.rate_limiter import RateLimiter
 from utils.security import SecurityHeaders
@@ -257,6 +257,7 @@ app.include_router(charters.router, prefix="/api/v1/charters", tags=["Charters"]
 app.include_router(payments.router, prefix="/api/v1/payments", tags=["Payments"])
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytics"])
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["Administration"])
+app.include_router(personal_development.router, prefix="/api/v1/development", tags=["Personal Development"])
 
 # Health check endpoints
 @app.get("/health", include_in_schema=False)
