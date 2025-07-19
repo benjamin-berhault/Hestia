@@ -1,145 +1,10 @@
 version: '3.8'
 
-services:
-  # PostgreSQL Database
-  db:
-    image: postgres:14-alpine
-    container_name: family_platform_db
-    environment:
-      POSTGRES_DB: family_db
-      POSTGRES_USER: family_user
-      POSTGRES_PASSWORD: family_pass
-      POSTGRES_HOST_AUTH_METHOD: trust
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
-    ports:
-      - "5432:5432"
-    networks:
-      - family_network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U family_user -d family_db"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # MinIO Object Storage
-  minio:
-    image: minio/minio:latest
-    container_name: family_platform_minio
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
-    volumes:
-      - minio_data:/data
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    networks:
-      - family_network
-    command: server /data --console-address ":9001"
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 20s
-      retries: 3
-
-  # Redis for Caching and Sessions
-  redis:
-    image: redis:7-alpine
-    container_name: family_platform_redis
-    volumes:
-      - redis_data:/data
-    ports:
-      - "6379:6379"
-    networks:
-      - family_network
-    restart: unless-stopped
-    command: redis-server --appendonly yes
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-
-  # FastAPI Backend
-  api:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: family_platform_api
-    environment:
-      DATABASE_URL: postgresql://family_user:family_pass@db:5432/family_db
-      MINIO_ENDPOINT: minio:9000
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
-      MINIO_SECURE: "false"
-      REDIS_URL: redis://redis:6379
-      SECRET_KEY: your-super-secret-key-change-in-production
-      DEBUG: "true"
-      CORS_ORIGINS: '["http://localhost:3000", "http://localhost:5173", "http://localhost:8080"]'
-    volumes:
-      - ./backend:/app
-      - /app/__pycache__
-    ports:
-      - "8000:8000"
-    networks:
-      - family_network
-    depends_on:
-      db:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Frontend Development Server
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile.dev
-    container_name: family_platform_frontend
-    environment:
-      VITE_API_URL: http://localhost:8000/api
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    ports:
-      - "5173:5173"
-    networks:
-      - family_network
-    depends_on:
-      - api
-    restart: unless-stopped
-    command: npm run dev -- --host 0.0.0.0
-
-  # Nginx Reverse Proxy (Production)
-  nginx:
-    image: nginx:alpine
-    container_name: family_platform_nginx
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./nginx/ssl:/etc/nginx/ssl
-    ports:
-      - "80:80"
-      - "443:443"
-    networks:
-      - family_network
-    depends_on:
-      - api
-      - frontend
-    restart: unless-stopped
-    profiles:
-      - production
+networks:
+  family-platform:
+    driver: bridge
+  monitoring:
+    driver: bridge
 
 volumes:
   postgres_data:
@@ -148,10 +13,438 @@ volumes:
     driver: local
   redis_data:
     driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  elasticsearch_data:
+    driver: local
 
-networks:
-  family_network:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
+services:
+  # Database Services
+  postgres:
+    image: postgres:15-alpine
+    container_name: family-platform-postgres
+    environment:
+      POSTGRES_DB: family_db
+      POSTGRES_USER: family_user
+      POSTGRES_PASSWORD: family_pass_secure_2024
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - family-platform
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U family_user -d family_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+
+  # Redis for caching and sessions
+  redis:
+    image: redis:7-alpine
+    container_name: family-platform-redis
+    command: redis-server --appendonly yes --requirepass redis_pass_secure_2024 --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - family-platform
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+
+  # MinIO for file storage
+  minio:
+    image: minio/minio:latest
+    container_name: family-platform-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minio_pass_secure_2024
+      MINIO_PROMETHEUS_AUTH_TYPE: public
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - family-platform
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+
+  # Elasticsearch for logging and search
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: family-platform-elasticsearch
+    environment:
+      - node.name=elasticsearch
+      - cluster.name=family-platform-cluster
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    networks:
+      - family-platform
+      - monitoring
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl --silent --fail localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: family-platform-backend
+    environment:
+      - DATABASE_URL=postgresql://family_user:family_pass_secure_2024@postgres:5432/family_db
+      - REDIS_URL=redis://:redis_pass_secure_2024@redis:6379/0
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minio_pass_secure_2024
+      - MINIO_SECURE=false
+      - ENVIRONMENT=production
+      - DEBUG=false
+      - SECRET_KEY=your-super-secret-production-key-change-this
+      - CORS_ORIGINS=["https://yourdomain.com","https://www.yourdomain.com"]
+      - ALLOWED_HOSTS=["yourdomain.com","www.yourdomain.com"]
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
+      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY:-}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID:-}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN:-}
+      - MAIL_USERNAME=${MAIL_USERNAME:-}
+      - MAIL_PASSWORD=${MAIL_PASSWORD:-}
+      - MAIL_FROM=${MAIL_FROM:-noreply@yourdomain.com}
+      - AGORA_APP_ID=${AGORA_APP_ID:-}
+      - AGORA_APP_CERTIFICATE=${AGORA_APP_CERTIFICATE:-}
+      - PUSHER_APP_ID=${PUSHER_APP_ID:-}
+      - PUSHER_KEY=${PUSHER_KEY:-}
+      - PUSHER_SECRET=${PUSHER_SECRET:-}
+    volumes:
+      - ./backend/logs:/app/logs
+      - ./backend/data:/app/data
+    ports:
+      - "8000:8000"
+    networks:
+      - family-platform
+      - monitoring
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+
+  # Celery Worker for background tasks
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: family-platform-celery-worker
+    command: celery -A main.celery worker --loglevel=info --concurrency=4
+    environment:
+      - DATABASE_URL=postgresql://family_user:family_pass_secure_2024@postgres:5432/family_db
+      - REDIS_URL=redis://:redis_pass_secure_2024@redis:6379/1
+      - CELERY_BROKER_URL=redis://:redis_pass_secure_2024@redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:redis_pass_secure_2024@redis:6379/2
+    volumes:
+      - ./backend/logs:/app/logs
+      - ./backend/data:/app/data
+    networks:
+      - family-platform
+    depends_on:
+      - postgres
+      - redis
+      - backend
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+
+  # Celery Beat for scheduled tasks
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: family-platform-celery-beat
+    command: celery -A main.celery beat --loglevel=info --scheduler=django_celery_beat.schedulers:DatabaseScheduler
+    environment:
+      - DATABASE_URL=postgresql://family_user:family_pass_secure_2024@postgres:5432/family_db
+      - REDIS_URL=redis://:redis_pass_secure_2024@redis:6379/1
+      - CELERY_BROKER_URL=redis://:redis_pass_secure_2024@redis:6379/1
+    volumes:
+      - ./backend/logs:/app/logs
+    networks:
+      - family-platform
+    depends_on:
+      - postgres
+      - redis
+      - backend
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.1'
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    container_name: family-platform-frontend
+    ports:
+      - "3000:80"
+    networks:
+      - family-platform
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: family-platform-nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./frontend/dist:/usr/share/nginx/html:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - family-platform
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+
+  # Monitoring Services
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: family-platform-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - monitoring
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: family-platform-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=grafana_admin_2024
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3001:3000"
+    networks:
+      - monitoring
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.25'
+
+  # Log Management
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.11.0
+    container_name: family-platform-filebeat
+    user: root
+    volumes:
+      - ./monitoring/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./backend/logs:/app/logs:ro
+    networks:
+      - monitoring
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.1'
+
+  # Security Scanner
+  trivy:
+    image: aquasec/trivy:latest
+    container_name: family-platform-trivy
+    command: ["server", "--listen", "0.0.0.0:4954"]
+    ports:
+      - "4954:4954"
+    networks:
+      - monitoring
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.25'
+
+  # Backup Service
+  backup:
+    image: postgres:15-alpine
+    container_name: family-platform-backup
+    command: |
+      sh -c "
+      while true; do
+        pg_dump -h postgres -U family_user -d family_db > /backups/backup_$$(date +%Y%m%d_%H%M%S).sql
+        find /backups -name '*.sql' -mtime +7 -delete
+        sleep 86400
+      done
+      "
+    environment:
+      - PGPASSWORD=family_pass_secure_2024
+    volumes:
+      - ./backups:/backups
+    networks:
+      - family-platform
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.1'
+
+  # Health Check Service
+  healthcheck:
+    image: curlimages/curl:latest
+    container_name: family-platform-healthcheck
+    command: |
+      sh -c "
+      while true; do
+        curl -f http://nginx/health || echo 'Frontend health check failed'
+        curl -f http://backend:8000/health || echo 'Backend health check failed'
+        curl -f http://minio:9000/minio/health/live || echo 'MinIO health check failed'
+        sleep 300
+      done
+      "
+    networks:
+      - family-platform
+    depends_on:
+      - nginx
+      - backend
+      - minio
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: '0.05'
