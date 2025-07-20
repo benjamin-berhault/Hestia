@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Development Dashboard - FamilyPlatform</title>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/personal-development.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="../assets/favicon.ico">
+    
+    <!-- Meta tags for SEO -->
+    <meta name="description" content="Track your personal development journey and become the best version of yourself for meaningful relationships.">
+    <meta name="keywords" content="personal development, self improvement, relationship platform, goals, challenges">
+    
+    <!-- Open Graph tags for social sharing -->
+    <meta property="og:title" content="Personal Development Dashboard - FamilyPlatform">
+    <meta property="og:description" content="Track your personal development journey and become the best version of yourself.">
+    <meta property="og:image" content="../assets/og-development.jpg">
+    <meta property="og:url" content="https://familyplatform.com/development">
+    <meta property="og:type" content="website">
+    
+    <!-- Preconnect to external domains -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header Navigation -->
+    <header class="main-header">
+        <nav class="nav-container">
+            <div class="nav-brand">
+                <a href="../index.html" class="brand-link">
+                    <img src="../assets/logo.svg" alt="FamilyPlatform" class="brand-logo">
+                    <span class="brand-text">FamilyPlatform</span>
+                </a>
+            </div>
+            
+            <div class="nav-menu" id="nav-menu">
+                <ul class="nav-list">
+                    <li class="nav-item">
+                        <a href="../pages/dashboard.html" class="nav-link">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="../pages/matches.html" class="nav-link">Matches</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="../pages/messages.html" class="nav-link">Messages</a>
+                    </li>
+                    <li class="nav-item active">
+                        <a href="../pages/development-dashboard.html" class="nav-link">Development</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="../pages/profile.html" class="nav-link">Profile</a>
+                    </li>
+                </ul>
+                
+                <div class="nav-actions">
+                    <div class="user-menu">
+                        <button class="user-menu-trigger" id="user-menu-trigger">
+                            <img src="../assets/default-avatar.svg" alt="User" class="user-avatar">
+                            <span class="user-name" id="user-name">Loading...</span>
+                            <svg class="dropdown-icon" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                        
+                        <div class="user-dropdown" id="user-dropdown">
+                            <a href="../pages/profile.html" class="dropdown-item">
+                                <svg class="dropdown-icon" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                                </svg>
+                                My Profile
+                            </a>
+                            <a href="../pages/settings.html" class="dropdown-item">
+                                <svg class="dropdown-icon" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
+                                </svg>
+                                Settings
+                            </a>
+                            <a href="../pages/support.html" class="dropdown-item">
+                                <svg class="dropdown-icon" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-2 0c0 .993-.241 1.929-.668 2.754l-1.524-1.525a3.997 3.997 0 00.078-2.183l1.562-1.562C17.759 8.071 18 9.009 18 10zm-9.652 2.356l3.356 3.356a8.003 8.003 0 01-6.14-2.14l2.784-2.784zm-2.784-2.784L2.704 6.712a8.003 8.003 0 012.14-6.14l2.784 2.784a3.997 3.997 0 00-2.784 2.784z" clip-rule="evenodd" />
+                                </svg>
+                                Help & Support
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <button class="dropdown-item logout-btn" id="logout-btn">
+                                <svg class="dropdown-icon" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd" />
+                                </svg>
+                                Sign Out
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="nav-toggle" id="nav-toggle">
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+            </button>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Development Dashboard Container -->
+        <div id="development-dashboard">
+            <!-- Dashboard content will be rendered here by JavaScript -->
+            <div class="loading-state">
+                <div class="loading-spinner"></div>
+                <p>Loading your development journey...</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="main-footer">
+        <div class="footer-container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <div class="footer-brand">
+                        <img src="../assets/logo.svg" alt="FamilyPlatform" class="footer-logo">
+                        <p class="footer-tagline">Building meaningful relationships through authentic connections</p>
+                    </div>
+                </div>
+                
+                <div class="footer-section">
+                    <h3 class="footer-title">Platform</h3>
+                    <ul class="footer-links">
+                        <li><a href="../pages/about.html">About Us</a></li>
+                        <li><a href="../pages/how-it-works.html">How It Works</a></li>
+                        <li><a href="../pages/success-stories.html">Success Stories</a></li>
+                        <li><a href="../pages/safety.html">Safety</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h3 class="footer-title">Development</h3>
+                    <ul class="footer-links">
+                        <li><a href="../pages/goals.html">Goal Setting</a></li>
+                        <li><a href="../pages/challenges.html">Challenges</a></li>
+                        <li><a href="../pages/mentorship.html">Mentorship</a></li>
+                        <li><a href="../pages/support-groups.html">Support Groups</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h3 class="footer-title">Support</h3>
+                    <ul class="footer-links">
+                        <li><a href="../pages/help.html">Help Center</a></li>
+                        <li><a href="../pages/contact.html">Contact Us</a></li>
+                        <li><a href="../pages/privacy.html">Privacy Policy</a></li>
+                        <li><a href="../pages/terms.html">Terms of Service</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <div class="footer-copyright">
+                    <p>&copy; 2024 FamilyPlatform. All rights reserved.</p>
+                </div>
+                <div class="footer-social">
+                    <a href="#" class="social-link" aria-label="Twitter">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+                        </svg>
+                    </a>
+                    <a href="#" class="social-link" aria-label="Facebook">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                        </svg>
+                    </a>
+                    <a href="#" class="social-link" aria-label="Instagram">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 6.62 5.367 11.987 11.988 11.987 6.62 0 11.987-5.367 11.987-11.987C24.014 5.367 18.637.001 12.017.001zM8.449 16.988c-1.297 0-2.448-.49-3.326-1.297C3.326 14.445 2.4 12.652 2.4 10.656c0-1.297.49-2.448 1.297-3.326C4.544 6.483 6.337 5.557 8.333 5.557c1.297 0 2.448.49 3.326 1.297.857.857 1.783 2.65 1.783 4.646 0 1.297-.49 2.448-1.297 3.326-.857.857-2.65 1.783-4.646 1.783z"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="../services/api-client.js"></script>
+    <script src="../components/personal-development-dashboard.js"></script>
+    <script src="../js/navigation.js"></script>
+    <script src="../js/auth.js"></script>
+    
+    <!-- Analytics -->
+    <script>
+        // Initialize analytics tracking
+        if (typeof gtag !== 'undefined') {
+            gtag('config', 'GA_MEASUREMENT_ID', {
+                page_title: 'Personal Development Dashboard',
+                page_location: window.location.href
+            });
+        }
+    </script>
+</body>
+</html>
